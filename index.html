@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Property Lease & Payment Portal</title>
+  <title>Multi-Property Lease & Payment Portal (Audit v3.0)</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 pb-20 md:pb-0">
@@ -42,10 +42,13 @@
           <button onclick="switchTab('analytics')" id="nav-analytics" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 hover:text-white">
             📈 Analytics Matrix
           </button>
+          <button onclick="switchTab('history')" id="nav-history" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 hover:text-white">
+            📜 Version History
+          </button>
         </nav>
       </div>
       <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
-        Connected to Ledger DB v2.8
+        Connected to Ledger DB v3.0
       </div>
     </aside>
 
@@ -79,26 +82,27 @@
             </button>
           </div>
 
+          <!-- Slide 1 KPI Metrics -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm">
-              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Total Units</p>
-              <p id="statTotalUnits" class="text-xl md:text-2xl font-bold text-slate-900">8</p>
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Units Paid Rent</p>
+              <p id="statPaidUnits" class="text-xl md:text-2xl font-bold text-green-600">6</p>
             </div>
             <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm">
-              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Expected Rent</p>
-              <p id="statExpectedRent" class="text-xl md:text-2xl font-bold text-slate-900">₹90,500</p>
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Units Rent Pending</p>
+              <p id="statPendingUnits" class="text-xl md:text-2xl font-bold text-amber-600">2</p>
             </div>
             <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm">
-              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Collected</p>
-              <p id="statCollectedRent" class="text-xl md:text-2xl font-bold text-green-600">₹79,000</p>
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Collected Rent</p>
+              <p id="statCollectedRent" class="text-xl md:text-2xl font-bold text-slate-900">₹79,000</p>
             </div>
             <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm">
-              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Pending / Due</p>
-              <p id="statPendingRent" class="text-xl md:text-2xl font-bold text-amber-600">₹11,500</p>
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Open Issues</p>
+              <p id="statOpenIssues" class="text-xl md:text-2xl font-bold text-indigo-600">2</p>
             </div>
           </div>
 
-          <!-- Dashboard Filters & Controls -->
+          <!-- Filters & Table -->
           <div class="bg-white rounded-xl border shadow-sm p-4 space-y-3">
             <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
               <select id="dashBuildingFilter" onchange="renderDashboard()" class="border p-2 rounded-lg text-sm bg-slate-50 w-full md:w-auto">
@@ -135,7 +139,7 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
               <h3 class="text-lg font-bold text-slate-900">Shops & Units Registry</h3>
-              <p class="text-xs text-gray-500">Filter property units and inspect financial details.</p>
+              <p class="text-xs text-gray-500">Filter property units, inspect phone contacts, and manage details.</p>
             </div>
             <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
               <select id="shopsBuildingFilter" onchange="renderShopsTable()" class="border p-2 rounded-lg text-sm bg-white">
@@ -148,21 +152,19 @@
           </div>
 
           <div class="bg-white rounded-xl border shadow-sm p-4">
-            <!-- Desktop Shops Table -->
             <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead class="bg-gray-50 text-xs font-semibold text-gray-500 border-b">
                   <tr>
                     <th class="p-3">SHOP NAME / UNIT</th>
-                    <th class="p-3">TENANT DETAILS</th>
+                    <th class="p-3">TENANT & PHONE</th>
                     <th class="p-3">FINANCIAL DETAILS</th>
-                    <th class="p-3">ADDITIONAL DETAILS</th>
+                    <th class="p-3">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody id="shopsTableBody"></tbody>
               </table>
             </div>
-            <!-- Mobile Shops Card View -->
             <div id="shopsCardContainer" class="md:hidden space-y-3"></div>
           </div>
         </section>
@@ -172,13 +174,22 @@
           <div class="flex justify-between items-center">
             <div>
               <h3 class="text-lg font-bold text-slate-900">Tenant Interactions</h3>
-              <p class="text-xs text-gray-500">Newest interactions displayed on top.</p>
+              <p class="text-xs text-gray-500">Filter by status or shop.</p>
             </div>
             <button onclick="openAddDetailsModal('interaction')" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-semibold hover:bg-indigo-700">
               + Log Interaction
             </button>
           </div>
-          <div class="bg-white rounded-xl border shadow-sm p-4">
+          <div class="bg-white rounded-xl border shadow-sm p-4 space-y-3">
+            <div class="flex gap-2">
+              <select id="interactionStatusFilter" onchange="renderInteractionsTable()" class="border p-2 rounded text-xs">
+                <option value="ALL">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+              <input type="text" id="interactionShopFilter" onkeyup="renderInteractionsTable()" placeholder="Filter by shop..." class="border p-2 rounded text-xs w-40" />
+            </div>
             <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead class="bg-gray-50 text-xs font-semibold text-gray-500 border-b">
@@ -202,20 +213,49 @@
         <section id="tab-analytics" class="space-y-6 hidden">
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
-              <h3 class="text-lg font-bold text-slate-900">Analytics Matrix (Shops vs. Time)</h3>
-              <p class="text-xs text-gray-500">Rent collection history across months.</p>
+              <h3 class="text-lg font-bold text-slate-900">Analytics Matrix (Shops vs Time)</h3>
+              <p class="text-xs text-gray-500">Rent collections across 6 and 12-month time ranges.</p>
             </div>
-            <select id="analyticsBuildingFilter" onchange="renderAnalyticsMatrix()" class="border p-2 rounded-lg text-sm bg-white w-full md:w-auto">
-              <option value="ALL">All Buildings</option>
-              <option value="City Centre Commercial Complex">City Centre Commercial Complex</option>
-              <option value="Tech Park Arcade">Tech Park Arcade</option>
-            </select>
+            <div class="flex gap-2">
+              <select id="analyticsTimeRange" onchange="renderAnalyticsMatrix()" class="border p-2 rounded-lg text-sm bg-white">
+                <option value="6">Last 6 Months</option>
+                <option value="12">Last 12 Months</option>
+              </select>
+              <select id="analyticsBuildingFilter" onchange="renderAnalyticsMatrix()" class="border p-2 rounded-lg text-sm bg-white">
+                <option value="ALL">All Buildings</option>
+                <option value="City Centre Commercial Complex">City Centre Commercial Complex</option>
+                <option value="Tech Park Arcade">Tech Park Arcade</option>
+              </select>
+            </div>
           </div>
           <div class="bg-white rounded-xl border shadow-sm overflow-x-auto p-2">
             <table class="w-full text-left border-collapse text-xs">
               <thead id="matrixHeader" class="bg-gray-100 font-bold text-gray-700 border-b"></thead>
               <tbody id="matrixBody"></tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- TAB 5: VERSION HISTORY -->
+        <section id="tab-history" class="space-y-6 hidden">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Version History & Audit Log</h3>
+            <p class="text-xs text-gray-500">Tracks changes made, editor credentials, and timestamps.</p>
+          </div>
+          <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-gray-50 font-semibold text-gray-500 border-b">
+                  <tr>
+                    <th class="p-3">TIMESTAMP</th>
+                    <th class="p-3">EDITOR</th>
+                    <th class="p-3">ACTION TYPE</th>
+                    <th class="p-3">LOG NOTES / DESCRIPTION</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
@@ -226,16 +266,19 @@
   <!-- Mobile Bottom Sticky Navigation Bar -->
   <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-slate-400 border-t border-slate-800 flex justify-around p-2 z-50">
     <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center gap-1 text-[10px] font-semibold text-indigo-400">
-      <span class="text-lg">📊</span> Dashboard
+      <span class="text-base">📊</span> Dashboard
     </button>
     <button onclick="switchTab('shops')" id="mob-nav-shops" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
-      <span class="text-lg">🏢</span> Shops
+      <span class="text-base">🏢</span> Shops
     </button>
     <button onclick="switchTab('interactions')" id="mob-nav-interactions" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
-      <span class="text-lg">💬</span> Interactions
+      <span class="text-base">💬</span> Interact
     </button>
     <button onclick="switchTab('analytics')" id="mob-nav-analytics" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
-      <span class="text-lg">📈</span> Matrix
+      <span class="text-base">📈</span> Matrix
+    </button>
+    <button onclick="switchTab('history')" id="mob-nav-history" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
+      <span class="text-base">📜</span> History
     </button>
   </nav>
 
@@ -248,6 +291,10 @@
       </div>
       <form onsubmit="saveAddDetails(event)" class="space-y-3">
         <input type="hidden" id="addDetailsType" />
+        <div>
+          <label class="block text-xs font-semibold mb-1">Editor Name / User *</label>
+          <input type="text" id="editorName" class="w-full border p-2 rounded-lg text-sm" value="Blesson Muthu Varunan" required />
+        </div>
         <div>
           <label class="block text-xs font-semibold mb-1">Select Shop / Unit *</label>
           <select id="addDetailsShop" class="w-full border p-2 rounded-lg text-sm" required></select>
@@ -317,6 +364,10 @@
         <button onclick="closeRegisterTenantModal()" class="text-gray-500 hover:text-black text-xl">&times;</button>
       </div>
       <form onsubmit="saveNewTenantRegistration(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Editor Name / User *</label>
+          <input type="text" id="regEditorName" class="w-full border p-2 rounded-lg text-sm" value="Blesson Muthu Varunan" required />
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold mb-1">Building Name *</label>
@@ -581,8 +632,17 @@
       }
     ];
 
+    let versionHistoryData = [
+      {
+        timestamp: "2026-10-10 08:30:00",
+        editor: "Blesson Muthu Varunan",
+        actionType: "INITIAL_SETUP",
+        notes: "Initialized portal v3.0 with Slide Deck alignment and audit log."
+      }
+    ];
+
     function switchTab(tabId) {
-      ['dashboard', 'shops', 'interactions', 'analytics'].forEach(t => {
+      ['dashboard', 'shops', 'interactions', 'analytics', 'history'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.add('hidden');
         const deskNav = document.getElementById(`nav-${t}`);
         if (deskNav) {
@@ -608,12 +668,14 @@
         dashboard: "Dashboard Overview",
         shops: "Shops & Units Registry",
         interactions: "Tenant Interactions & Tickets",
-        analytics: "Analytics Matrix (Shops vs Time)"
+        analytics: "Analytics Matrix (Shops vs Time)",
+        history: "Version History & Audit Trail"
       };
       const pageTitle = document.getElementById('pageTitle');
       if (pageTitle) pageTitle.textContent = titles[tabId];
 
       if (tabId === 'analytics') renderAnalyticsMatrix();
+      if (tabId === 'history') renderHistoryTable();
     }
 
     function syncMonthFilter(val) {
@@ -622,7 +684,7 @@
       renderDashboard();
     }
 
-    // --- DASHBOARD RENDER (Responsive Table + Mobile Cards) ---
+    // --- DASHBOARD RENDER ---
     function renderDashboard() {
       const month = document.getElementById('globalMonthFilter').value;
       const bFilter = document.getElementById('dashBuildingFilter').value;
@@ -633,7 +695,8 @@
       tbody.innerHTML = "";
       cardContainer.innerHTML = "";
 
-      let expected = 0;
+      let paidUnitsCount = 0;
+      let pendingUnitsCount = 0;
       let collected = 0;
       let tableHtml = "";
       let cardHtml = "";
@@ -642,13 +705,14 @@
         if (bFilter !== 'ALL' && t.building !== bFilter) return;
         if (search && !t.tenantName.toLowerCase().includes(search) && !t.unitNo.toLowerCase().includes(search)) return;
         
-        expected += t.monthlyRent;
         const p = t.payments[month] || { paid: 0, status: "PENDING" };
+        if (p.status === 'PAID') paidUnitsCount++;
+        else pendingUnitsCount++;
+
         collected += p.paid;
 
         const badgeColor = p.status === 'PAID' ? 'bg-green-100 text-green-800' : p.status === 'PARTIAL' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
 
-        // Desktop Table Row
         tableHtml += `
           <tr class="border-b hover:bg-gray-50 text-sm">
             <td class="p-3 font-semibold text-slate-800">
@@ -666,13 +730,12 @@
                 + Add Rent
               </button>
               <button onclick="openAddDetailsModal('interaction', '${t.unitNo}')" class="px-3 py-1 bg-slate-800 text-white rounded text-xs hover:bg-slate-900 font-semibold">
-                + Add Interaction
+                + Interaction
               </button>
             </td>
           </tr>
         `;
 
-        // Mobile Card
         cardHtml += `
           <div class="bg-white border rounded-xl p-4 shadow-sm space-y-2">
             <div class="flex justify-between items-start">
@@ -685,7 +748,7 @@
             </div>
             <div class="flex justify-between items-center pt-2 border-t text-xs">
               <div>
-                <span class="text-gray-500">Paid:</span> <strong class="text-green-700">₹${p.paid.toLocaleString('en-IN')}</strong> / <span class="text-gray-400">₹${t.monthlyRent.toLocaleString('en-IN')}</span>
+                <span class="text-gray-500">Paid:</span> <strong class="text-green-700">₹${p.paid.toLocaleString('en-IN')}</strong>
               </div>
             </div>
             <div class="flex gap-2 pt-2">
@@ -703,278 +766,5 @@
       tbody.innerHTML = tableHtml;
       cardContainer.innerHTML = cardHtml;
 
-      document.getElementById('statExpectedRent').textContent = `₹${expected.toLocaleString('en-IN')}`;
-      document.getElementById('statCollectedRent').textContent = `₹${collected.toLocaleString('en-IN')}`;
-      document.getElementById('statPendingRent').textContent = `₹${(expected - collected).toLocaleString('en-IN')}`;
-    }
-
-    // --- SHOPS RENDER ---
-    function renderShopsTable() {
-      const bFilter = document.getElementById('shopsBuildingFilter').value;
-      const search = document.getElementById('shopsSearch').value.toLowerCase();
-      const tbody = document.getElementById('shopsTableBody');
-      const cardContainer = document.getElementById('shopsCardContainer');
-      tbody.innerHTML = "";
-      cardContainer.innerHTML = "";
-
-      let tableHtml = "";
-      let cardHtml = "";
-
-      tenantsData.forEach(t => {
-        if (bFilter !== 'ALL' && t.building !== bFilter) return;
-        if (search && !t.tenantName.toLowerCase().includes(search) && !t.unitNo.toLowerCase().includes(search)) return;
-
-        tableHtml += `
-          <tr class="border-b hover:bg-gray-50 text-sm font-medium">
-            <td class="p-3">
-              <span class="text-indigo-600 font-bold">${t.unitNo}</span><br>
-              <span class="text-xs text-gray-500 font-normal">${t.building}</span>
-            </td>
-            <td class="p-3">
-              ${t.tenantName}<br>
-              <span class="text-xs text-gray-500 font-normal">${t.businessType} (${t.phone})</span>
-            </td>
-            <td class="p-3">
-              <span class="text-green-700 font-bold">₹${t.monthlyRent.toLocaleString('en-IN')}</span> /mo<br>
-              <span class="text-xs text-gray-500 font-normal">Advance: ₹${t.advanceAmount.toLocaleString('en-IN')}</span>
-            </td>
-            <td class="p-3">
-              <button onclick="toggleAdditionalDetails('${t.id}')" class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 font-semibold">
-                Details ▾
-              </button>
-            </td>
-          </tr>
-          <tr id="additional-${t.id}" class="hidden bg-slate-50 border-b">
-            <td colspan="4" class="p-4 text-xs text-gray-600 space-y-1">
-              <div class="grid grid-cols-2 gap-2">
-                <div><strong>SqFt:</strong> ${t.sqFt}</div>
-                <div><strong>EB Meter:</strong> ${t.ebMeter}</div>
-                <div><strong>Key Given:</strong> ${t.keyGivenDate || '-'}</div>
-                <div><strong>Rent Decided:</strong> ${t.rentDecidedDate || '-'}</div>
-                <div><strong>Due Day:</strong> Day ${t.rentDueDay || '-'}</div>
-              </div>
-              <div class="mt-2 text-slate-700"><strong>Notes:</strong> ${t.notes || 'None'}</div>
-            </td>
-          </tr>
-        `;
-
-        cardHtml += `
-          <div class="bg-white border rounded-xl p-4 shadow-sm space-y-2">
-            <div class="flex justify-between items-start">
-              <div>
-                <span class="text-xs font-bold text-indigo-600">${t.unitNo}</span>
-                <h4 class="font-bold text-slate-900 text-sm">${t.tenantName}</h4>
-                <p class="text-xs text-gray-500">${t.businessType} (${t.phone})</p>
-              </div>
-              <span class="text-xs font-bold text-green-700">₹${t.monthlyRent.toLocaleString('en-IN')}/mo</span>
-            </div>
-            <div class="text-xs text-gray-600 space-y-1 pt-2 border-t">
-              <div><strong>Advance:</strong> ₹${t.advanceAmount.toLocaleString('en-IN')}</div>
-              <div><strong>SqFt:</strong> ${t.sqFt} | <strong>EB:</strong> ${t.ebMeter}</div>
-              <div><strong>Key Date:</strong> ${t.keyGivenDate || '-'} | <strong>Due:</strong> Day ${t.rentDueDay || '-'}</div>
-              <div class="text-gray-500 italic">${t.notes || ''}</div>
-            </div>
-          </div>
-        `;
-      });
-
-      tbody.innerHTML = tableHtml;
-      cardContainer.innerHTML = cardHtml;
-    }
-
-    function toggleAdditionalDetails(id) {
-      document.getElementById(`additional-${id}`).classList.toggle('hidden');
-    }
-
-    // --- INTERACTIONS RENDER ---
-    function renderInteractionsTable() {
-      const tbody = document.getElementById('interactionsTableBody');
-      const cardContainer = document.getElementById('interactionsCardContainer');
-      tbody.innerHTML = "";
-      cardContainer.innerHTML = "";
-
-      let tableHtml = "";
-      let cardHtml = "";
-
-      interactionsData.forEach(item => {
-        const badgeColor = item.status === 'RESOLVED' ? 'bg-green-100 text-green-800' : item.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800';
-        
-        tableHtml += `
-          <tr class="border-b hover:bg-gray-50 text-sm">
-            <td class="p-3 font-medium text-gray-700">${item.date}</td>
-            <td class="p-3 font-bold text-indigo-600">${item.unitNo}</td>
-            <td class="p-3 font-semibold text-slate-800">${item.summary}</td>
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${badgeColor}">${item.status}</span></td>
-            <td class="p-3 text-xs text-gray-600">${item.notes}</td>
-            <td class="p-3 text-xs text-indigo-600 underline cursor-pointer">${item.attachment || 'None'}</td>
-          </tr>
-        `;
-
-        cardHtml += `
-          <div class="bg-white border rounded-xl p-4 shadow-sm space-y-2">
-            <div class="flex justify-between items-start">
-              <div>
-                <span class="text-xs font-bold text-indigo-600">${item.unitNo}</span>
-                <h4 class="font-bold text-slate-900 text-sm">${item.summary}</h4>
-              </div>
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeColor}">${item.status}</span>
-            </div>
-            <p class="text-xs text-gray-600">${item.notes}</p>
-            <div class="flex justify-between items-center text-[10px] text-gray-400 pt-2 border-t">
-              <span>Date: ${item.date}</span>
-              <span>Attachment: ${item.attachment}</span>
-            </div>
-          </div>
-        `;
-      });
-
-      tbody.innerHTML = tableHtml;
-      cardContainer.innerHTML = cardHtml;
-    }
-
-    // --- ANALYTICS MATRIX RENDER ---
-    function renderAnalyticsMatrix() {
-      const bFilter = document.getElementById('analyticsBuildingFilter').value;
-      const header = document.getElementById('matrixHeader');
-      const body = document.getElementById('matrixBody');
-
-      const months = ["2026-07", "2026-08", "2026-09", "2026-10"];
-      const monthLabels = ["Jul 26", "Aug 26", "Sep 26", "Oct 26"];
-
-      let headHtml = `<tr><th class="p-2 border-r">Shop</th><th class="p-2 border-r">Tenant</th>`;
-      monthLabels.forEach(m => headHtml += `<th class="p-2 border-r text-center">${m}</th>`);
-      headHtml += `<th class="p-2 text-center">Total</th></tr>`;
-      header.innerHTML = headHtml;
-
-      let bodyHtml = "";
-      tenantsData.forEach(t => {
-        if (bFilter !== 'ALL' && t.building !== bFilter) return;
-
-        bodyHtml += `<tr class="border-b hover:bg-gray-50">
-          <td class="p-2 border-r font-bold text-indigo-600">${t.unitNo}</td>
-          <td class="p-2 border-r font-medium truncate max-w-[100px]">${t.tenantName}</td>`;
-
-        let rowTotal = 0;
-        months.forEach(m => {
-          const paid = t.payments[m] ? t.payments[m].paid : 0;
-          rowTotal += paid;
-          bodyHtml += `<td class="p-2 border-r text-center font-semibold text-green-700">₹${paid.toLocaleString('en-IN')}</td>`;
-        });
-
-        bodyHtml += `<td class="p-2 text-center font-bold text-slate-900">₹${rowTotal.toLocaleString('en-IN')}</td></tr>`;
-      });
-      body.innerHTML = bodyHtml;
-    }
-
-    // --- MODAL CONTROLS ---
-    function openAddDetailsModal(type, unitNo = "") {
-      document.getElementById('addDetailsType').value = type;
-      document.getElementById('addDetailsTitle').textContent = type === 'rent' ? 'Add Monthly Rent Payment' : 'Log New Interaction';
-      
-      if (type === 'rent') {
-        document.getElementById('rentFields').classList.remove('hidden');
-        document.getElementById('interactionFields').classList.add('hidden');
-      } else {
-        document.getElementById('rentFields').classList.add('hidden');
-        document.getElementById('interactionFields').classList.remove('hidden');
-        document.getElementById('addInteractionDate').valueAsDate = new Date();
-      }
-
-      const shopSelect = document.getElementById('addDetailsShop');
-      shopSelect.innerHTML = tenantsData.map(t => `<option value="${t.unitNo}" ${t.unitNo === unitNo ? 'selected' : ''}>${t.unitNo} - ${t.tenantName}</option>`).join('');
-      document.getElementById('addDetailsModal').classList.remove('hidden');
-    }
-
-    function closeAddDetailsModal() {
-      document.getElementById('addDetailsModal').classList.add('hidden');
-    }
-
-    function saveAddDetails(e) {
-      e.preventDefault();
-      const type = document.getElementById('addDetailsType').value;
-      const unitNo = document.getElementById('addDetailsShop').value;
-      const t = tenantsData.find(item => item.unitNo === unitNo);
-
-      if (type === 'rent') {
-        const month = document.getElementById('addRentMonth').value;
-        const amount = parseFloat(document.getElementById('addRentAmount').value) || 0;
-        const status = document.getElementById('addRentStatus').value;
-
-        if (t) {
-          t.payments[month] = { paid: amount, status: status };
-        }
-        alert("Rent payment added successfully!");
-      } else {
-        const newItem = {
-          date: document.getElementById('addInteractionDate').value,
-          unitNo: unitNo,
-          summary: document.getElementById('addInteractionSummary').value,
-          status: document.getElementById('addInteractionStatus').value,
-          notes: document.getElementById('addInteractionNotes').value,
-          attachment: document.getElementById('addInteractionFile').files[0] ? document.getElementById('addInteractionFile').files[0].name : 'None'
-        };
-        interactionsData.unshift(newItem);
-        alert("Interaction logged successfully!");
-      }
-
-      closeAddDetailsModal();
-      renderDashboard();
-      renderInteractionsTable();
-      renderAnalyticsMatrix();
-    }
-
-    function openRegisterTenantModal() {
-      document.getElementById('registerTenantModal').classList.remove('hidden');
-    }
-    function closeRegisterTenantModal() {
-      document.getElementById('registerTenantModal').classList.add('hidden');
-    }
-
-    function saveNewTenantRegistration(e) {
-      e.preventDefault();
-      const unitNo = document.getElementById('regUnitNo').value;
-      const building = document.getElementById('regBuilding').value;
-
-      const existingIdx = tenantsData.findIndex(item => item.unitNo.toLowerCase() === unitNo.toLowerCase() && item.building === building);
-
-      const newTenant = {
-        id: "shop_" + Date.now(),
-        building: building,
-        unitNo: unitNo,
-        tenantName: document.getElementById('regTenantName').value,
-        businessType: document.getElementById('regBusinessType').value,
-        phone: document.getElementById('regPhone').value,
-        monthlyRent: parseFloat(document.getElementById('regMonthlyRent').value),
-        advanceAmount: parseFloat(document.getElementById('regAdvanceAmount').value),
-        sqFt: document.getElementById('regSqFt').value,
-        ebMeter: document.getElementById('regEbMeter').value,
-        keyGivenDate: document.getElementById('regKeyGivenDate').value,
-        rentDecidedDate: document.getElementById('regRentDecidedDate').value,
-        rentDueDay: parseInt(document.getElementById('regRentDueDay').value) || '',
-        notes: document.getElementById('regNotes').value,
-        payments: {}
-      };
-
-      if (existingIdx !== -1) {
-        tenantsData[existingIdx] = newTenant;
-        alert(`Tenant successfully transferred/updated for ${unitNo}! Old agreement archived.`);
-      } else {
-        tenantsData.push(newTenant);
-        alert(`New rental agreement successfully registered for ${unitNo}!`);
-      }
-
-      closeRegisterTenantModal();
-      renderDashboard();
-      renderShopsTable();
-      renderAnalyticsMatrix();
-    }
-
-    window.onload = () => {
-      renderDashboard();
-      renderShopsTable();
-      renderInteractionsTable();
-      renderAnalyticsMatrix();
-    };
-  </script>
-</body>
-</html>
+      document.getElementById('statPaidUnits').textContent = paidUnitsCount;
+      document.getElementById
