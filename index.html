@@ -358,6 +358,9 @@
                 </div>
             </div>
 
+            <!-- System Notification / Message Bar -->
+            <div id="system-msg" class="hidden p-4 rounded-xl text-sm font-medium transition-all"></div>
+
             <!-- Danger Zone -->
             <div class="bg-red-50 p-6 rounded-xl border border-red-200 shadow-sm space-y-4 mt-8">
                 <div class="flex items-center space-x-3 text-red-600">
@@ -576,6 +579,14 @@
             renderAll();
         }
 
+        function showMessage(text, isError = false) {
+            const msgEl = document.getElementById('system-msg');
+            msgEl.innerText = text;
+            msgEl.className = `p-4 rounded-xl text-sm font-medium transition-all ${isError ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`;
+            msgEl.classList.remove('hidden');
+            setTimeout(() => msgEl.classList.add('hidden'), 4000);
+        }
+
         // Navigation tab swapper
         function switchTab(tabId) {
             document.querySelectorAll('main > section').forEach(sec => sec.classList.add('hidden'));
@@ -784,7 +795,7 @@
                 return;
             }
 
-            filtered.reverse().forEach(p => {
+            filtered.slice().reverse().forEach(p => {
                 const unit = appState.units.find(u => u.id === p.unitId);
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
@@ -913,31 +924,25 @@
 
         // Entity Actions
         function evictTenant(unitId) {
-            if (confirm("Are you sure you want to mark this unit as vacant and clear tenant info?")) {
-                const unit = appState.units.find(u => u.id === unitId);
-                if (unit) {
-                    unit.tenantName = "";
-                    unit.phone = "";
-                    unit.email = "";
-                    unit.leaseStart = "";
-                    unit.leaseEnd = "";
-                    saveStateToStorage();
-                }
+            const unit = appState.units.find(u => u.id === unitId);
+            if (unit) {
+                unit.tenantName = "";
+                unit.phone = "";
+                unit.email = "";
+                unit.leaseStart = "";
+                unit.leaseEnd = "";
+                saveStateToStorage();
             }
         }
 
         function deleteUnit(unitId) {
-            if (confirm("Delete this unit and all related history?")) {
-                appState.units = appState.units.filter(u => u.id !== unitId);
-                saveStateToStorage();
-            }
+            appState.units = appState.units.filter(u => u.id !== unitId);
+            saveStateToStorage();
         }
 
         function deletePayment(paymentId) {
-            if (confirm("Delete this payment record?")) {
-                appState.payments = appState.payments.filter(p => p.id !== paymentId);
-                saveStateToStorage();
-            }
+            appState.payments = appState.payments.filter(p => p.id !== paymentId);
+            saveStateToStorage();
         }
 
         function toggleTicketStatus(ticketId) {
@@ -949,10 +954,8 @@
         }
 
         function deleteTicket(ticketId) {
-            if (confirm("Delete this ticket?")) {
-                appState.tickets = appState.tickets.filter(t => t.id !== ticketId);
-                saveStateToStorage();
-            }
+            appState.tickets = appState.tickets.filter(t => t.id !== ticketId);
+            saveStateToStorage();
         }
 
         function exportDataSnapshot() {
@@ -965,6 +968,7 @@
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
+            showMessage("Snapshot backup downloaded successfully!");
         }
 
         function importDataSnapshot(event) {
@@ -978,29 +982,27 @@
                     if (imported.units && Array.isArray(imported.units)) {
                         appState = imported;
                         saveStateToStorage();
-                        alert("Successfully loaded all property and tenant records from snapshot!");
+                        showMessage("Successfully loaded property and tenant records from snapshot!");
                     } else {
-                        alert("Invalid file format. Snapshot must contain unit records.");
+                        showMessage("Invalid file format. Snapshot must contain unit records.", true);
                     }
                 } catch (err) {
-                    alert("Error parsing JSON backup file.");
+                    showMessage("Error parsing JSON backup file.", true);
                 }
             };
             reader.readAsText(file);
         }
 
         function resetToSampleData() {
-            if (confirm("Reset application data back to default sample records?")) {
-                appState = JSON.parse(JSON.stringify(SAMPLE_DATA));
-                saveStateToStorage();
-            }
+            appState = JSON.parse(JSON.stringify(SAMPLE_DATA));
+            saveStateToStorage();
+            showMessage("Reset application data back to default sample records.");
         }
 
         function clearAllData() {
-            if (confirm("Are you sure? This will wipe all local tenant and unit records!")) {
-                appState = { units: [], payments: [], tickets: [] };
-                saveStateToStorage();
-            }
+            appState = { units: [], payments: [], tickets: [] };
+            saveStateToStorage();
+            showMessage("Cleared all local tenant and unit records.", true);
         }
     </script>
 </body>
