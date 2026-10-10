@@ -3,8 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Property Lease & Payment Portal (Audit v3.2)</title>
+  <title>Multi-Property Lease & Payment Portal (LED Grid v3.3)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Glowing LED Indicator Styles matching image */
+    .led-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid #333;
+      display: inline-block;
+      box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4), 0 0 6px rgba(0,0,0,0.2);
+    }
+    .led-green {
+      background-color: #00FF00;
+      box-shadow: 0 0 8px #00ff00, inset -2px -2px 4px rgba(0,0,0,0.3);
+    }
+    .led-orange {
+      background-color: #FFA500;
+      box-shadow: 0 0 8px #ffa500, inset -2px -2px 4px rgba(0,0,0,0.3);
+    }
+    .led-red {
+      background-color: #FF0000;
+      box-shadow: 0 0 8px #ff0000, inset -2px -2px 4px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 pb-20 md:pb-0">
 
@@ -48,7 +71,7 @@
         </nav>
       </div>
       <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
-        Connected to Ledger DB v3.2
+        Connected to Ledger DB v3.3
       </div>
     </aside>
 
@@ -73,23 +96,13 @@
         <!-- TAB 1: DASHBOARD -->
         <section id="tab-dashboard" class="space-y-6">
           
-          <!-- LED Status Summary Bar -->
-          <div class="bg-white rounded-xl border shadow-sm p-4 flex flex-wrap items-center justify-between gap-4">
-            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">LED Status Summary:</div>
-            <div class="flex flex-wrap items-center gap-6 text-xs font-semibold">
-              <div class="flex items-center gap-2">
-                <span class="w-3.5 h-3.5 rounded-full bg-green-500 inline-block shadow-sm animate-pulse"></span>
-                <span>Paid (<span id="ledPaidCount">6</span>)</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block shadow-sm"></span>
-                <span>Partial (<span id="ledPartialCount">0</span>)</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="w-3.5 h-3.5 rounded-full bg-red-500 inline-block shadow-sm"></span>
-                <span>Pending (<span id="ledPendingCount">2</span>)</span>
-              </div>
-            </div>
+          <!-- LED SHOP STATUS GRID (Matching Image Layout) -->
+          <div class="bg-gray-200 border-2 border-gray-400 rounded-lg p-3 md:p-4 shadow-sm overflow-x-auto">
+            <div class="text-xs font-bold text-gray-700 uppercase mb-2">Unit Payment LED Status Grid</div>
+            <table class="border-collapse border border-gray-400 bg-gray-100 text-center w-full max-w-full text-xs font-semibold">
+              <thead id="ledGridHeader" class="bg-gray-200 text-gray-800 border-b border-gray-400"></thead>
+              <tbody id="ledGridBody"></tbody>
+            </table>
           </div>
 
           <!-- Slide 1 Summary Metrics Cards -->
@@ -657,10 +670,10 @@
 
     let versionHistoryData = [
       {
-        timestamp: "2026-10-10 08:49:00",
+        timestamp: "2026-10-10 08:55:00",
         editor: "Blesson Muthu Varunan",
         actionType: "INITIAL_SETUP",
-        notes: "Initialized portal v3.2 with LED status summary bar."
+        notes: "Initialized portal v3.3 with exact LED status grid."
       }
     ];
 
@@ -707,7 +720,7 @@
       renderDashboard();
     }
 
-    // --- DASHBOARD RENDER ---
+    // --- DASHBOARD RENDER & LED GRID ---
     function renderDashboard() {
       const month = document.getElementById('globalMonthFilter').value;
       const bFilter = document.getElementById('dashBuildingFilter').value;
@@ -720,19 +733,36 @@
 
       let totalUnitsCount = 0;
       let paidUnitsCount = 0;
-      let partialUnitsCount = 0;
       let pendingUnitsCount = 0;
       let tableHtml = "";
       let cardHtml = "";
+
+      // Construct LED Grid Tables
+      const ledHeader = document.getElementById('ledGridHeader');
+      const ledBody = document.getElementById('ledGridBody');
+      let ledHeadHtml = `<tr>`;
+      let ledBodyHtml = `<tr>`;
 
       tenantsData.forEach(t => {
         if (bFilter !== 'ALL' && t.building !== bFilter) return;
         totalUnitsCount++;
         
         const p = t.payments[month] || { paid: 0, status: "PENDING" };
-        if (p.status === 'PAID') paidUnitsCount++;
-        else if (p.status === 'PARTIAL') partialUnitsCount++;
-        else pendingUnitsCount++;
+        let ledClass = "led-orange";
+        if (p.status === 'PAID') {
+          paidUnitsCount++;
+          ledClass = "led-green";
+        } else {
+          pendingUnitsCount++;
+          ledClass = p.status === 'PARTIAL' ? "led-orange" : "led-orange";
+        }
+
+        // Build LED Header and Row
+        const shopLabel = t.unitNo.toLowerCase().replace(/\s+/g, '');
+        ledHeadHtml += `<th class="border border-gray-400 p-2 font-normal text-gray-700 min-w-[70px]">${shopLabel}</th>`;
+        ledBodyHtml += `<td class="border border-gray-400 p-3 bg-gray-50 cursor-pointer hover:bg-gray-200" onclick="openAddDetailsModal('rent', '${t.unitNo}')">
+          <span class="led-circle ${ledClass}"></span>
+        </td>`;
 
         if (search && !t.tenantName.toLowerCase().includes(search) && !t.unitNo.toLowerCase().includes(search)) return;
 
@@ -788,17 +818,17 @@
         `;
       });
 
+      ledHeadHtml += `</tr>`;
+      ledBodyHtml += `</tr>`;
+      ledHeader.innerHTML = ledHeadHtml;
+      ledBody.innerHTML = ledBodyHtml;
+
       tbody.innerHTML = tableHtml;
       cardContainer.innerHTML = cardHtml;
 
-      // Update KPIs and LED counts
       document.getElementById('statTotalUnits').textContent = totalUnitsCount;
       document.getElementById('statPaidUnits').textContent = paidUnitsCount;
       document.getElementById('statPendingUnits').textContent = pendingUnitsCount;
-      
-      document.getElementById('ledPaidCount').textContent = paidUnitsCount;
-      document.getElementById('ledPartialCount').textContent = partialUnitsCount;
-      document.getElementById('ledPendingCount').textContent = pendingUnitsCount;
 
       const openIssuesCount = interactionsData.filter(i => i.status !== 'RESOLVED').length;
       document.getElementById('statOpenIssues').textContent = openIssuesCount;
