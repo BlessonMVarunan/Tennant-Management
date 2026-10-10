@@ -1,209 +1,958 @@
-{
-  "version": "3.3",
-  "lastUpdated": "2026-10-10",
-  "editor": "Blesson Muthu Varunan",
-  "tenants": [
-    {
-      "id": "shop1",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 1",
-      "tenantName": "Reshmi & Sudha",
-      "businessType": "Tailor and Dress shop",
-      "phone": "9047991747",
-      "monthlyRent": 10500,
-      "advanceAmount": 30000,
-      "sqFt": "160 sqft (10*16)",
-      "ebMeter": "31230013309",
-      "keyGivenDate": "2025-04-05",
-      "rentDecidedDate": "2025-03-09",
-      "rentDueDay": 15,
-      "notes": "Initial rent 11k, revised to 10500 in May 2026.",
-      "payments": {
-        "2026-10": { "paid": 10500, "status": "PAID" },
-        "2026-09": { "paid": 10500, "status": "PAID" },
-        "2026-08": { "paid": 10550, "status": "PAID" },
-        "2026-07": { "paid": 10800, "status": "PAID" }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Property Lease & Payment Portal (Lean & Scalable)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .led-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid #333;
+      display: inline-block;
+      box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4), 0 0 6px rgba(0,0,0,0.2);
+    }
+    .led-green {
+      background-color: #00FF00;
+      box-shadow: 0 0 8px #00ff00, inset -2px -2px 4px rgba(0,0,0,0.3);
+    }
+    .led-orange {
+      background-color: #FFA500;
+      box-shadow: 0 0 8px #ffa500, inset -2px -2px 4px rgba(0,0,0,0.3);
+    }
+    .led-red {
+      background-color: #FF0000;
+      box-shadow: 0 0 8px #ff0000, inset -2px -2px 4px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 pb-20 md:pb-0">
+
+  <!-- Mobile Top Header -->
+  <header class="bg-slate-900 text-white px-4 py-3 flex justify-between items-center md:hidden sticky top-0 z-40 shadow-md">
+    <h1 class="text-base font-bold tracking-wide">LEASE PORTAL</h1>
+    <div class="flex items-center gap-2">
+      <select id="mobileMonthFilter" onchange="syncMonthFilter(this.value)" class="bg-slate-800 text-xs text-white border border-slate-700 p-1.5 rounded">
+        <option value="2026-10">Oct 2026</option>
+        <option value="2026-09">Sep 2026</option>
+        <option value="2026-08">Aug 2026</option>
+        <option value="2026-07">Jul 2026</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="flex min-h-screen">
+    <!-- Desktop Sidebar Navigation -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex-col justify-between hidden md:flex shrink-0">
+      <div>
+        <div class="p-6 border-b border-slate-800">
+          <h1 class="text-lg font-bold text-white tracking-wide">LEASE PORTAL</h1>
+          <p class="text-xs text-slate-400 mt-1">Multi-Building Management</p>
+        </div>
+        <nav class="p-4 space-y-1">
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white transition-colors">
+            📊 Dashboard
+          </button>
+          <button onclick="switchTab('shops')" id="nav-shops" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 hover:text-white transition-colors">
+            🏢 Shops & Units
+          </button>
+          <button onclick="switchTab('interactions')" id="nav-interactions" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 hover:text-white transition-colors">
+            💬 Interactions
+          </button>
+          <button onclick="switchTab('analytics')" id="nav-analytics" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 hover:text-white transition-colors">
+            📈 Analytics Matrix
+          </button>
+          <button onclick="switchTab('history')" id="nav-history" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 hover:text-white transition-colors">
+            📜 Version History
+          </button>
+        </nav>
+      </div>
+      <div class="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-2">
+        <button onclick="exportData()" class="w-full py-1.5 bg-emerald-600 text-white rounded text-xs font-semibold hover:bg-emerald-700">💾 Export JSON Backup</button>
+        <button onclick="document.getElementById('importFile').click()" class="w-full py-1.5 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700">📂 Import JSON Snapshot</button>
+        <input type="file" id="importFile" accept=".json" onchange="importData(event)" class="hidden" />
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <header class="bg-white border-b px-6 py-4 hidden md:flex justify-between items-center shadow-sm">
+        <h2 id="pageTitle" class="text-xl font-bold text-slate-900">Dashboard Overview</h2>
+        <div class="flex items-center gap-3">
+          <button onclick="exportData()" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">💾 Export JSON</button>
+          <button onclick="document.getElementById('importFileTop').click()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">📂 Import JSON</button>
+          <input type="file" id="importFileTop" accept=".json" onchange="importData(event)" class="hidden" />
+          <select id="globalMonthFilter" onchange="syncMonthFilter(this.value)" class="border p-2 rounded-lg text-sm font-medium bg-slate-50">
+            <option value="2026-10">October 2026</option>
+            <option value="2026-09">September 2026</option>
+            <option value="2026-08">August 2026</option>
+            <option value="2026-07">July 2026</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="p-4 md:p-6 flex-1 max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="space-y-6">
+          <div class="bg-gray-200 border-2 border-gray-400 rounded-lg p-3 md:p-4 shadow-sm overflow-x-auto">
+            <div class="text-xs font-bold text-gray-700 uppercase mb-2">Unit Payment LED Status Grid</div>
+            <table class="border-collapse border border-gray-400 bg-gray-100 text-center w-full max-w-full text-xs font-semibold">
+              <thead id="ledGridHeader" class="bg-gray-200 text-gray-800 border-b border-gray-400"></thead>
+              <tbody id="ledGridBody"></tbody>
+            </table>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm flex flex-col justify-between">
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Total Units</p>
+              <p id="statTotalUnits" class="text-xl md:text-2xl font-bold text-slate-900 mt-2">0</p>
+            </div>
+            <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm flex flex-col justify-between">
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Units Paid Rent</p>
+              <p id="statPaidUnits" class="text-xl md:text-2xl font-bold text-green-600 mt-2">0</p>
+            </div>
+            <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm flex flex-col justify-between">
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Units Rent Pending</p>
+              <p id="statPendingUnits" class="text-xl md:text-2xl font-bold text-amber-600 mt-2">0</p>
+            </div>
+            <div class="bg-white p-3 md:p-4 rounded-xl border shadow-sm flex flex-col justify-between">
+              <p class="text-[10px] md:text-xs uppercase text-gray-500 font-semibold">Open Issues</p>
+              <p id="statOpenIssues" class="text-xl md:text-2xl font-bold text-indigo-600 mt-2">0</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border shadow-sm p-4 space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 pb-3 border-b">
+              <div class="flex items-center gap-2 w-full md:w-auto">
+                <span class="text-xs font-bold text-slate-600 uppercase">Building Filter:</span>
+                <select id="dashBuildingFilter" onchange="renderDashboard()" class="border p-2 rounded-lg text-sm bg-slate-50 w-full md:w-auto">
+                  <option value="ALL">All Buildings</option>
+                  <option value="City Centre Commercial Complex">City Centre Commercial Complex</option>
+                  <option value="Tech Park Arcade">Tech Park Arcade</option>
+                </select>
+              </div>
+              <input type="text" id="dashSearch" onkeyup="renderDashboard()" placeholder="Search shop or tenant..." class="border p-2 rounded-lg text-sm w-full md:w-64" />
+            </div>
+
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left border-collapse min-w-[650px]">
+                <thead class="bg-gray-50 text-xs font-semibold text-gray-500 border-b">
+                  <tr>
+                    <th class="p-3">SHOP & BUILDING</th>
+                    <th class="p-3">TENANT & BUSINESS</th>
+                    <th class="p-3">RENT STATUS</th>
+                    <th class="p-3">AMOUNT PAID (₹)</th>
+                    <th class="p-3">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody id="dashTableBody"></tbody>
+              </table>
+            </div>
+            <div id="dashCardContainer" class="md:hidden space-y-3"></div>
+          </div>
+        </section>
+
+        <!-- TAB 2: SHOPS & UNITS -->
+        <section id="tab-shops" class="space-y-6 hidden">
+          <div class="bg-white rounded-xl border shadow-sm p-4 space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Shops & Units Registry</h3>
+                <p class="text-xs text-gray-500">Manage tenant contacts and registration details.</p>
+              </div>
+              <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+                <select id="shopsBuildingFilter" onchange="renderShopsTable()" class="border p-2 rounded-lg text-sm bg-white">
+                  <option value="ALL">All Buildings</option>
+                  <option value="City Centre Commercial Complex">City Centre Commercial Complex</option>
+                  <option value="Tech Park Arcade">Tech Park Arcade</option>
+                </select>
+                <input type="text" id="shopsSearch" onkeyup="renderShopsTable()" placeholder="Search shop..." class="border p-2 rounded-lg text-sm w-full md:w-48 bg-white" />
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button onclick="openRegisterTenantModal()" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700">
+                + Register / Transfer Tenant
+              </button>
+            </div>
+
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left border-collapse min-w-[650px]">
+                <thead class="bg-gray-50 text-xs font-semibold text-gray-500 border-b">
+                  <tr>
+                    <th class="p-3">SHOP NAME / UNIT</th>
+                    <th class="p-3">TENANT & PHONE</th>
+                    <th class="p-3">FINANCIAL DETAILS</th>
+                    <th class="p-3">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody id="shopsTableBody"></tbody>
+              </table>
+            </div>
+            <div id="shopsCardContainer" class="md:hidden space-y-3"></div>
+          </div>
+        </section>
+
+        <!-- TAB 3: INTERACTIONS & TICKETS -->
+        <section id="tab-interactions" class="space-y-6 hidden">
+          <div class="bg-white rounded-xl border shadow-sm p-4 space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Tenant Interactions</h3>
+                <p class="text-xs text-gray-500">Filter by status or shop.</p>
+              </div>
+              <button onclick="openAddDetailsModal('interaction')" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700">
+                + Log Interaction
+              </button>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-2">
+              <select id="interactionStatusFilter" onchange="renderInteractionsTable()" class="border p-2 rounded text-xs bg-slate-50">
+                <option value="ALL">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+              <input type="text" id="interactionShopFilter" onkeyup="renderInteractionsTable()" placeholder="Filter by shop..." class="border p-2 rounded text-xs w-full md:w-48 bg-slate-50" />
+            </div>
+
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left border-collapse min-w-[650px]">
+                <thead class="bg-gray-50 text-xs font-semibold text-gray-500 border-b">
+                  <tr>
+                    <th class="p-3">DATE</th>
+                    <th class="p-3">SHOP / UNIT</th>
+                    <th class="p-3">SUMMARY</th>
+                    <th class="p-3">STATUS</th>
+                    <th class="p-3">LOG NOTES</th>
+                    <th class="p-3">ATTACHMENT</th>
+                  </tr>
+                </thead>
+                <tbody id="interactionsTableBody"></tbody>
+              </table>
+            </div>
+            <div id="interactionsCardContainer" class="md:hidden space-y-3"></div>
+          </div>
+        </section>
+
+        <!-- TAB 4: ANALYTICS MATRIX -->
+        <section id="tab-analytics" class="space-y-6 hidden">
+          <div class="bg-white rounded-xl border shadow-sm p-4 space-y-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b">
+              <div>
+                <h3 class="text-base font-bold text-slate-900">Analytics Matrix (Shops vs Time)</h3>
+                <p class="text-xs text-gray-500">Rent collection history across time ranges.</p>
+              </div>
+              <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                <select id="analyticsTimeRange" onchange="renderAnalyticsMatrix()" class="border p-2 rounded-lg text-sm bg-white">
+                  <option value="6">Last 6 Months</option>
+                  <option value="12">Last 12 Months</option>
+                </select>
+                <select id="analyticsBuildingFilter" onchange="renderAnalyticsMatrix()" class="border p-2 rounded-lg text-sm bg-white">
+                  <option value="ALL">All Buildings</option>
+                  <option value="City Centre Commercial Complex">City Centre Commercial Complex</option>
+                  <option value="Tech Park Arcade">Tech Park Arcade</option>
+                </select>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs min-w-[600px]">
+                <thead id="matrixHeader" class="bg-gray-100 font-bold text-gray-700 border-b"></thead>
+                <tbody id="matrixBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: VERSION HISTORY -->
+        <section id="tab-history" class="space-y-6 hidden">
+          <div class="bg-white rounded-xl border shadow-sm p-4 space-y-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-900">Version History & Audit Log</h3>
+              <p class="text-xs text-gray-500">Tracks changes made, editor credentials, and timestamps.</p>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs min-w-[500px]">
+                <thead class="bg-gray-50 font-semibold text-gray-500 border-b">
+                  <tr>
+                    <th class="p-3">TIMESTAMP</th>
+                    <th class="p-3">EDITOR</th>
+                    <th class="p-3">ACTION TYPE</th>
+                    <th class="p-3">LOG NOTES / DESCRIPTION</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Bottom Sticky Navigation Bar -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-slate-400 border-t border-slate-800 flex justify-around p-2 z-50 shadow-lg">
+    <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center gap-1 text-[10px] font-semibold text-indigo-400">
+      <span class="text-base">📊</span> Dashboard
+    </button>
+    <button onclick="switchTab('shops')" id="mob-nav-shops" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
+      <span class="text-base">🏢</span> Shops
+    </button>
+    <button onclick="switchTab('interactions')" id="mob-nav-interactions" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
+      <span class="text-base">💬</span> Interact
+    </button>
+    <button onclick="switchTab('analytics')" id="mob-nav-analytics" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
+      <span class="text-base">📈</span> Matrix
+    </button>
+    <button onclick="switchTab('history')" id="mob-nav-history" class="flex flex-col items-center gap-1 text-[10px] font-semibold">
+      <span class="text-base">📜</span> History
+    </button>
+  </nav>
+
+  <!-- ADD DETAILS MODAL -->
+  <div id="addDetailsModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 id="addDetailsTitle" class="text-base font-bold">Add Details</h3>
+        <button onclick="closeAddDetailsModal()" class="text-gray-500 hover:text-black text-xl">&times;</button>
+      </div>
+      <form onsubmit="saveAddDetails(event)" class="space-y-3">
+        <input type="hidden" id="addDetailsType" />
+        <div>
+          <label class="block text-xs font-semibold mb-1">Editor Name / User *</label>
+          <input type="text" id="editorName" class="w-full border p-2 rounded-lg text-sm bg-slate-50" value="Blesson Muthu Varunan" required />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Select Shop / Unit *</label>
+          <select id="addDetailsShop" class="w-full border p-2 rounded-lg text-sm" required></select>
+        </div>
+        <div id="rentFields" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Billing Month *</label>
+            <select id="addRentMonth" class="w-full border p-2 rounded-lg text-sm">
+              <option value="2026-10">October 2026</option>
+              <option value="2026-09">September 2026</option>
+              <option value="2026-08">August 2026</option>
+              <option value="2026-07">July 2026</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Amount Paid (₹) *</label>
+            <input type="number" id="addRentAmount" class="w-full border p-2 rounded-lg text-sm" placeholder="10500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Payment Status *</label>
+            <select id="addRentStatus" class="w-full border p-2 rounded-lg text-sm">
+              <option value="PAID">PAID</option>
+              <option value="PARTIAL">PARTIAL</option>
+              <option value="PENDING">PENDING</option>
+            </select>
+          </div>
+        </div>
+        <div id="interactionFields" class="space-y-3 hidden">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Date *</label>
+            <input type="date" id="addInteractionDate" class="w-full border p-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Summary *</label>
+            <input type="text" id="addInteractionSummary" class="w-full border p-2 rounded-lg text-sm" placeholder="e.g., Discussion with tenant" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Status</label>
+            <select id="addInteractionStatus" class="w-full border p-2 rounded-lg text-sm">
+              <option value="OPEN">Open</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Log Notes</label>
+            <textarea id="addInteractionNotes" class="w-full border p-2 rounded-lg text-sm" rows="2" placeholder="Details..."></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Attachment</label>
+            <input type="file" id="addInteractionFile" class="w-full border p-2 rounded-lg text-xs" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 border-t pt-3">
+          <button type="button" onclick="closeAddDetailsModal()" class="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- REGISTER / TRANSFER TENANT MODAL -->
+  <div id="registerTenantModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-xl">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-bold">Register Rental Agreement / Tenant Transfer</h3>
+        <button onclick="closeRegisterTenantModal()" class="text-gray-500 hover:text-black text-xl">&times;</button>
+      </div>
+      <form onsubmit="saveNewTenantRegistration(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Editor Name / User *</label>
+          <input type="text" id="regEditorName" class="w-full border p-2 rounded-lg text-sm bg-slate-50" value="Blesson Muthu Varunan" required />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Building Name *</label>
+            <select id="regBuilding" class="w-full border p-2 rounded-lg text-sm">
+              <option value="City Centre Commercial Complex">City Centre Commercial Complex</option>
+              <option value="Tech Park Arcade">Tech Park Arcade</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Shop / Unit Number *</label>
+            <input type="text" id="regUnitNo" class="w-full border p-2 rounded-lg text-sm" placeholder="e.g., Shop 2" required />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">New Tenant Name *</label>
+            <input type="text" id="regTenantName" class="w-full border p-2 rounded-lg text-sm" required />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Business Type *</label>
+            <input type="text" id="regBusinessType" class="w-full border p-2 rounded-lg text-sm" required />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Phone Number *</label>
+            <input type="text" id="regPhone" class="w-full border p-2 rounded-lg text-sm" required />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Monthly Rent (₹) *</label>
+            <input type="number" id="regMonthlyRent" class="w-full border p-2 rounded-lg text-sm" required />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Advance Amount Held (₹) *</label>
+            <input type="number" id="regAdvanceAmount" class="w-full border p-2 rounded-lg text-sm" required />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Square Feet</label>
+            <input type="text" id="regSqFt" class="w-full border p-2 rounded-lg text-sm" placeholder="e.g., 128 sqft" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">EB Meter ID</label>
+            <input type="text" id="regEbMeter" class="w-full border p-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Key Given Date</label>
+            <input type="date" id="regKeyGivenDate" class="w-full border p-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Date Decided for Rent</label>
+            <input type="date" id="regRentDecidedDate" class="w-full border p-2 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Monthly Rent Due Day</label>
+            <input type="number" id="regRentDueDay" class="w-full border p-2 rounded-lg text-sm" min="1" max="31" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Agreement Notes / Transfer Remarks</label>
+          <textarea id="regNotes" class="w-full border p-2 rounded-lg text-sm" rows="2" placeholder="Archived previous tenant records and onboarded new agreement..."></textarea>
+        </div>
+        <div class="flex justify-end gap-2 border-t pt-3">
+          <button type="button" onclick="closeRegisterTenantModal()" class="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Save Agreement & Onboard</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // State starts lean & empty
+    let tenantsData = [];
+    let interactionsData = [];
+    let versionHistoryData = [
+      {
+        timestamp: "2026-10-10 09:00:00",
+        editor: "Blesson Muthu Varunan",
+        actionType: "INITIAL_SETUP",
+        notes: "Initialized lean portal template. Ready for JSON import."
       }
-    },
-    {
-      "id": "shop2",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 2",
-      "tenantName": "Milk Distribution Store",
-      "businessType": "Milk & Dairy Supplies",
-      "phone": "6369385806",
-      "monthlyRent": 9000,
-      "advanceAmount": 40000,
-      "sqFt": "128 sqft (8*16)",
-      "ebMeter": "031230013308",
-      "keyGivenDate": "2026-04-20",
-      "rentDecidedDate": "2026-04-14",
-      "rentDueDay": 7,
-      "notes": "Previous tenant Jagdish Fancy Store.",
-      "payments": {
-        "2026-10": { "paid": 9000, "status": "PAID" },
-        "2026-09": { "paid": 9000, "status": "PAID" },
-        "2026-08": { "paid": 9000, "status": "PAID" },
-        "2026-07": { "paid": 9000, "status": "PAID" }
-      }
-    },
-    {
-      "id": "shop3",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 3",
-      "tenantName": "Dr. Mahalakshmi",
-      "businessType": "Clinic / Medical Services",
-      "phone": "9790353101",
-      "monthlyRent": 9500,
-      "advanceAmount": 30000,
-      "sqFt": "128 sqft (8*16)",
-      "ebMeter": "031230013306",
-      "keyGivenDate": "2026-05-04",
-      "rentDecidedDate": "2026-06-23",
-      "rentDueDay": 18,
-      "notes": "Previous mobile shop vacated Dec 2025.",
-      "payments": {
-        "2026-10": { "paid": 0, "status": "PENDING" },
-        "2026-09": { "paid": 9500, "status": "PAID" },
-        "2026-08": { "paid": 9000, "status": "PARTIAL" },
-        "2026-07": { "paid": 0, "status": "PENDING" }
-      }
-    },
-    {
-      "id": "shop4",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 4",
-      "tenantName": "Mobile Shop Extension",
-      "businessType": "Mobile Sales & Service",
-      "phone": "9500865316",
-      "monthlyRent": 10500,
-      "advanceAmount": 30000,
-      "sqFt": "128 sqft (Corner double shutter)",
-      "ebMeter": "031230013307",
-      "keyGivenDate": "2026-03-24",
-      "rentDecidedDate": "2026-03-17",
-      "rentDueDay": 10,
-      "notes": "Double shutter corner unit.",
-      "payments": {
-        "2026-10": { "paid": 10500, "status": "PAID" },
-        "2026-09": { "paid": 10500, "status": "PAID" },
-        "2026-08": { "paid": 34500, "status": "PAID" },
-        "2026-07": { "paid": 0, "status": "PENDING" }
-      }
-    },
-    {
-      "id": "shop5",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 5",
-      "tenantName": "Vetri",
-      "businessType": "Saloon & Hair Care",
-      "phone": "9500566863",
-      "monthlyRent": 7800,
-      "advanceAmount": 30000,
-      "sqFt": "160 sqft (10*16)",
-      "ebMeter": "031230013334",
-      "keyGivenDate": "2025-11-11",
-      "rentDecidedDate": "2025-11-05",
-      "rentDueDay": 15,
-      "notes": "Rent increased to 7800 after 6 months.",
-      "payments": {
-        "2026-10": { "paid": 7800, "status": "PAID" },
-        "2026-09": { "paid": 7800, "status": "PAID" },
-        "2026-08": { "paid": 7550, "status": "PAID" },
-        "2026-07": { "paid": 7800, "status": "PAID" }
-      }
-    },
-    {
-      "id": "shop6",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 6",
-      "tenantName": "Gowtham",
-      "businessType": "IT (Work From Home)",
-      "phone": "8973466515",
-      "monthlyRent": 4250,
-      "advanceAmount": 15000,
-      "sqFt": "128 sqft",
-      "ebMeter": "031230013335 (Submeter)",
-      "keyGivenDate": "2026-01-23",
-      "rentDecidedDate": "2026-01-13",
-      "rentDueDay": 7,
-      "notes": "Uses common + shop6 submeter.",
-      "payments": {
-        "2026-10": { "paid": 4250, "status": "PAID" },
-        "2026-09": { "paid": 4250, "status": "PAID" },
-        "2026-08": { "paid": 4250, "status": "PAID" },
-        "2026-07": { "paid": 4250, "status": "PAID" }
-      }
-    },
-    {
-      "id": "shop7_8",
-      "building": "City Centre Commercial Complex",
-      "unitNo": "Shop 7 & 8",
-      "tenantName": "Asaan",
-      "businessType": "Real Estate Office",
-      "phone": "9944930460",
-      "monthlyRent": 11500,
-      "advanceAmount": 45000,
-      "sqFt": "288 sqft (18*16)",
-      "ebMeter": "031230013336",
-      "keyGivenDate": "2025-10-04",
-      "rentDecidedDate": "2025-09-28",
-      "rentDueDay": 19,
-      "notes": "Combined shops 7 & 8.",
-      "payments": {
-        "2026-10": { "paid": 11500, "status": "PAID" },
-        "2026-09": { "paid": 11500, "status": "PAID" },
-        "2026-08": { "paid": 23000, "status": "PAID" },
-        "2026-07": { "paid": 11500, "status": "PAID" }
-      }
-    },
-    {
-      "id": "shop_9_12",
-      "building": "Tech Park Arcade",
-      "unitNo": "Shop 9, 10, 11, 12",
-      "tenantName": "Salman & Subashni",
-      "businessType": "IT Services & Development",
-      "phone": "9360422671",
-      "monthlyRent": 20000,
-      "advanceAmount": 70000,
-      "sqFt": "544 sqft (16*34)",
-      "ebMeter": "031230013337",
-      "keyGivenDate": "2026-01-19",
-      "rentDecidedDate": "2026-01-10",
-      "rentDueDay": 10,
-      "notes": "Large combined 4-shop space.",
-      "payments": {
-        "2026-10": { "paid": 20000, "status": "PAID" },
-        "2026-09": { "paid": 20100, "status": "PAID" },
-        "2026-08": { "paid": 20000, "status": "PAID" },
-        "2026-07": { "paid": 20000, "status": "PAID" }
+    ];
+
+    // Persistence & Import / Export Logic
+    function saveDataToStorage() {
+      const backupObj = {
+        version: "3.3",
+        lastUpdated: new Date().toISOString(),
+        tenants: tenantsData,
+        interactions: interactionsData,
+        versionHistory: versionHistoryData
+      };
+      localStorage.setItem('lease_portal_data', JSON.stringify(backupObj));
+    }
+
+    function loadDataFromStorage() {
+      const saved = localStorage.getItem('lease_portal_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          tenantsData = parsed.tenants || [];
+          interactionsData = parsed.interactions || [];
+          versionHistoryData = parsed.versionHistory || versionHistoryData;
+        } catch(e) {
+          console.error("Error loading local storage", e);
+        }
       }
     }
-  ],
-  "interactions": [
-    {
-      "date": "2026-10-02",
-      "unitNo": "Shop 3",
-      "summary": "Requested rent extension due to medical camp setup delay",
-      "status": "IN_PROGRESS",
-      "notes": "Spoke with Dr. Mahalakshmi. Brother-in-law reviewing on-site.",
-      "attachment": "Medical_Notice.pdf"
-    },
-    {
-      "date": "2026-09-15",
-      "unitNo": "Shop 4",
-      "summary": "Sub-meter reading reconciliation and wiring check",
-      "status": "RESOLVED",
-      "notes": "Checked by electrician. Settled.",
-      "attachment": "Meter_Photo.jpg"
+
+    function exportData() {
+      const backupObj = {
+        version: "3.3",
+        lastUpdated: new Date().toISOString(),
+        tenants: tenantsData,
+        interactions: interactionsData,
+        versionHistory: versionHistoryData
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `tenants_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
     }
-  ],
-  "versionHistory": [
-    {
-      "timestamp": "2026-10-10 08:55:00",
-      "editor": "Blesson Muthu Varunan",
-      "actionType": "INITIAL_SETUP",
-      "notes": "Initialized portal v3.3 with exact slide-aligned layout structure and JSON snapshot support."
+
+    function importData(event) {
+      const fileReader = new FileReader();
+      if (event.target.files[0]) {
+        fileReader.readAsText(event.target.files[0], "UTF-8");
+        fileReader.onload = (e) => {
+          try {
+            const imported = JSON.parse(e.target.result);
+            tenantsData = imported.tenants || [];
+            interactionsData = imported.interactions || [];
+            versionHistoryData = imported.versionHistory || versionHistoryData;
+            saveDataToStorage();
+            refreshAllViews();
+            alert("Tenants and records imported successfully!");
+          } catch (error) {
+            alert("Invalid JSON backup file format.");
+          }
+        };
+      }
     }
-  ]
-}
+
+    function switchTab(tabId) {
+      ['dashboard', 'shops', 'interactions', 'analytics', 'history'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const deskNav = document.getElementById(`nav-${t}`);
+        if (deskNav) {
+          deskNav.classList.remove('bg-indigo-600', 'text-white');
+          deskNav.classList.add('hover:bg-slate-800', 'hover:text-white');
+        }
+        const mobNav = document.getElementById(`mob-nav-${t}`);
+        if (mobNav) {
+          mobNav.classList.remove('text-indigo-400');
+          mobNav.classList.add('text-slate-400');
+        }
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      
+      const activeDeskNav = document.getElementById(`nav-${tabId}`);
+      if (activeDeskNav) activeDeskNav.classList.add('bg-indigo-600', 'text-white');
+
+      const activeMobNav = document.getElementById(`mob-nav-${tabId}`);
+      if (activeMobNav) activeMobNav.classList.add('text-indigo-400');
+      
+      const titles = {
+        dashboard: "Dashboard Overview",
+        shops: "Shops & Units Registry",
+        interactions: "Tenant Interactions & Tickets",
+        analytics: "Analytics Matrix (Shops vs Time)",
+        history: "Version History & Audit Trail"
+      };
+      const pageTitle = document.getElementById('pageTitle');
+      if (pageTitle) pageTitle.textContent = titles[tabId];
+
+      if (tabId === 'analytics') renderAnalyticsMatrix();
+      if (tabId === 'history') renderHistoryTable();
+    }
+
+    function syncMonthFilter(val) {
+      document.getElementById('globalMonthFilter').value = val;
+      document.getElementById('mobileMonthFilter').value = val;
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      const month = document.getElementById('globalMonthFilter').value;
+      const bFilter = document.getElementById('dashBuildingFilter').value;
+      const search = document.getElementById('dashSearch').value.toLowerCase();
+      
+      const tbody = document.getElementById('dashTableBody');
+      const cardContainer = document.getElementById('dashCardContainer');
+      tbody.innerHTML = "";
+      cardContainer.innerHTML = "";
+
+      let totalUnitsCount = 0;
+      let paidUnitsCount = 0;
+      let pendingUnitsCount = 0;
+      let tableHtml = "";
+      let cardHtml = "";
+
+      const ledHeader = document.getElementById('ledGridHeader');
+      const ledBody = document.getElementById('ledGridBody');
+      let ledHeadHtml = `<tr>`;
+      let ledBodyHtml = `<tr>`;
+
+      if (tenantsData.length === 0) {
+        ledHeadHtml += `<th class="border border-gray-400 p-2 text-gray-500">No Units Registered</th>`;
+        ledBodyHtml += `<td class="border border-gray-400 p-3 text-gray-400 text-xs">Import JSON or Register Tenant</td>`;
+      }
+
+      tenantsData.forEach(t => {
+        if (bFilter !== 'ALL' && t.building !== bFilter) return;
+        totalUnitsCount++;
+        
+        const p = (t.payments && t.payments[month]) ? t.payments[month] : { paid: 0, status: "PENDING" };
+        let ledClass = "led-orange";
+        if (p.status === 'PAID') {
+          paidUnitsCount++;
+          ledClass = "led-green";
+        } else {
+          pendingUnitsCount++;
+        }
+
+        const shopLabel = t.unitNo.toLowerCase().replace(/\s+/g, '');
+        ledHeadHtml += `<th class="border border-gray-400 p-2 font-normal text-gray-700 min-w-[70px]">${shopLabel}</th>`;
+        ledBodyHtml += `<td class="border border-gray-400 p-3 bg-gray-50 cursor-pointer hover:bg-gray-200" onclick="openAddDetailsModal('rent', '${t.unitNo}')">
+          <span class="led-circle ${ledClass}"></span>
+        </td>`;
+
+        if (search && !t.tenantName.toLowerCase().includes(search) && !t.unitNo.toLowerCase().includes(search)) return;
+
+        const badgeColor = p.status === 'PAID' ? 'bg-green-100 text-green-800' : p.status === 'PARTIAL' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
+
+        tableHtml += `
+          <tr class="border-b hover:bg-gray-50 text-sm">
+            <td class="p-3 font-semibold text-slate-800">
+              <span class="text-indigo-600">${t.unitNo}</span><br>
+              <span class="text-xs font-normal text-gray-500">${t.building}</span>
+            </td>
+            <td class="p-3">
+              ${t.tenantName}<br>
+              <span class="text-xs text-gray-500">${t.businessType}</span>
+            </td>
+            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${badgeColor}">${p.status}</span></td>
+            <td class="p-3 font-bold text-green-700">₹${(p.paid || 0).toLocaleString('en-IN')} <span class="text-xs font-normal text-gray-500">(Due: ₹${(t.monthlyRent || 0).toLocaleString('en-IN')})</span></td>
+            <td class="p-3 flex gap-2">
+              <button onclick="openAddDetailsModal('rent', '${t.unitNo}')" class="px-3 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 font-semibold">+ Add Rent</button>
+              <button onclick="openAddDetailsModal('interaction', '${t.unitNo}')" class="px-3 py-1 bg-slate-800 text-white rounded text-xs hover:bg-slate-900 font-semibold">+ Interaction</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      ledHeadHtml += `</tr>`;
+      ledBodyHtml += `</tr>`;
+      ledHeader.innerHTML = ledHeadHtml;
+      ledBody.innerHTML = ledBodyHtml;
+
+      tbody.innerHTML = tableHtml || `<tr><td colspan="5" class="p-4 text-center text-gray-500 text-xs">No matching tenant records found. Click "+ Register / Transfer Tenant" or import JSON.</td></tr>`;
+
+      document.getElementById('statTotalUnits').textContent = totalUnitsCount;
+      document.getElementById('statPaidUnits').textContent = paidUnitsCount;
+      document.getElementById('statPendingUnits').textContent = pendingUnitsCount;
+
+      const openIssuesCount = interactionsData.filter(i => i.status !== 'RESOLVED').length;
+      document.getElementById('statOpenIssues').textContent = openIssuesCount;
+    }
+
+    function renderShopsTable() {
+      const bFilter = document.getElementById('shopsBuildingFilter').value;
+      const search = document.getElementById('shopsSearch').value.toLowerCase();
+      const tbody = document.getElementById('shopsTableBody');
+      tbody.innerHTML = "";
+
+      let tableHtml = "";
+      tenantsData.forEach(t => {
+        if (bFilter !== 'ALL' && t.building !== bFilter) return;
+        if (search && !t.tenantName.toLowerCase().includes(search) && !t.unitNo.toLowerCase().includes(search)) return;
+
+        tableHtml += `
+          <tr class="border-b hover:bg-gray-50 text-sm font-medium">
+            <td class="p-3">
+              <span class="text-indigo-600 font-bold">${t.unitNo}</span><br>
+              <span class="text-xs text-gray-500 font-normal">${t.building}</span>
+            </td>
+            <td class="p-3">
+              ${t.tenantName}<br>
+              <span class="text-xs text-gray-500 font-normal">📞 ${t.phone}</span>
+            </td>
+            <td class="p-3">
+              <span class="text-green-700 font-bold">₹${(t.monthlyRent || 0).toLocaleString('en-IN')}</span> /mo<br>
+              <span class="text-xs text-gray-500 font-normal">Advance: ₹${(t.advanceAmount || 0).toLocaleString('en-IN')}</span>
+            </td>
+            <td class="p-3">
+              <button onclick="openRegisterTenantModal('${t.unitNo}')" class="px-3 py-1 bg-slate-800 text-white rounded text-xs hover:bg-indigo-600 font-semibold">Edit Details</button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = tableHtml || `<tr><td colspan="4" class="p-4 text-center text-gray-500 text-xs">No shops registered yet.</td></tr>`;
+    }
+
+    function renderInteractionsTable() {
+      const statusFilter = document.getElementById('interactionStatusFilter').value;
+      const shopFilter = document.getElementById('interactionShopFilter').value.toLowerCase();
+      const tbody = document.getElementById('interactionsTableBody');
+      tbody.innerHTML = "";
+
+      let tableHtml = "";
+      interactionsData.forEach(item => {
+        if (statusFilter !== 'ALL' && item.status !== statusFilter) return;
+        if (shopFilter && !item.unitNo.toLowerCase().includes(shopFilter) && !item.summary.toLowerCase().includes(shopFilter)) return;
+
+        const badgeColor = item.status === 'RESOLVED' ? 'bg-green-100 text-green-800' : item.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800';
+        
+        tableHtml += `
+          <tr class="border-b hover:bg-gray-50 text-sm">
+            <td class="p-3 font-medium text-gray-700">${item.date}</td>
+            <td class="p-3 font-bold text-indigo-600">${item.unitNo}</td>
+            <td class="p-3 font-semibold text-slate-800">${item.summary}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${badgeColor}">${item.status}</span></td>
+            <td class="p-3 text-xs text-gray-600">${item.notes}</td>
+            <td class="p-3 text-xs text-indigo-600 underline">${item.attachment || 'None'}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = tableHtml || `<tr><td colspan="6" class="p-4 text-center text-gray-500 text-xs">No interactions logged.</td></tr>`;
+    }
+
+    function renderAnalyticsMatrix() {
+      const bFilter = document.getElementById('analyticsBuildingFilter').value;
+      const range = parseInt(document.getElementById('analyticsTimeRange').value) || 6;
+      const header = document.getElementById('matrixHeader');
+      const body = document.getElementById('matrixBody');
+
+      let months = [];
+      let monthLabels = [];
+      const d = new Date(2026, 9, 1);
+      for (let i = range - 1; i >= 0; i--) {
+        let temp = new Date(d.getFullYear(), d.getMonth() - i, 1);
+        let yyyy = temp.getFullYear();
+        let mm = String(temp.getMonth() + 1).padStart(2, '0');
+        months.push(`${yyyy}-${mm}`);
+        monthLabels.push(temp.toLocaleString('default', { month: 'short', year: '2-digit' }));
+      }
+
+      let headHtml = `<tr><th class="p-2 border-r">Shop</th><th class="p-2 border-r">Tenant</th>`;
+      monthLabels.forEach(m => headHtml += `<th class="p-2 border-r text-center">${m}</th>`);
+      headHtml += `<th class="p-2 text-center">Total</th></tr>`;
+      header.innerHTML = headHtml;
+
+      let bodyHtml = "";
+      tenantsData.forEach(t => {
+        if (bFilter !== 'ALL' && t.building !== bFilter) return;
+
+        bodyHtml += `<tr class="border-b hover:bg-gray-50">
+          <td class="p-2 border-r font-bold text-indigo-600">${t.unitNo}</td>
+          <td class="p-2 border-r font-medium truncate max-w-[100px]">${t.tenantName}</td>`;
+
+        let rowTotal = 0;
+        months.forEach(m => {
+          const paid = (t.payments && t.payments[m]) ? t.payments[m].paid : 0;
+          rowTotal += paid;
+          bodyHtml += `<td class="p-2 border-r text-center font-semibold text-green-700">₹${paid.toLocaleString('en-IN')}</td>`;
+        });
+
+        bodyHtml += `<td class="p-2 text-center font-bold text-slate-900">₹${rowTotal.toLocaleString('en-IN')}</td></tr>`;
+      });
+      body.innerHTML = bodyHtml || `<tr><td colspan="${range + 3}" class="p-4 text-center text-gray-500 text-xs">No tenant records for analytics.</td></tr>`;
+    }
+
+    function renderHistoryTable() {
+      const tbody = document.getElementById('historyTableBody');
+      tbody.innerHTML = versionHistoryData.map(h => `
+        <tr class="border-b hover:bg-gray-50">
+          <td class="p-3 text-gray-500">${h.timestamp}</td>
+          <td class="p-3 font-bold text-indigo-600">${h.editor}</td>
+          <td class="p-3 font-semibold">${h.actionType}</td>
+          <td class="p-3 text-gray-700">${h.notes}</td>
+        </tr>
+      `).join('');
+    }
+
+    function openAddDetailsModal(type, unitNo = "") {
+      if (tenantsData.length === 0) {
+        alert("Please register a tenant or import your JSON backup first!");
+        return;
+      }
+      document.getElementById('addDetailsType').value = type;
+      document.getElementById('addDetailsTitle').textContent = type === 'rent' ? 'Add Monthly Rent Payment' : 'Log New Interaction';
+      
+      if (type === 'rent') {
+        document.getElementById('rentFields').classList.remove('hidden');
+        document.getElementById('interactionFields').classList.add('hidden');
+      } else {
+        document.getElementById('rentFields').classList.add('hidden');
+        document.getElementById('interactionFields').classList.remove('hidden');
+        document.getElementById('addInteractionDate').valueAsDate = new Date();
+      }
+
+      const shopSelect = document.getElementById('addDetailsShop');
+      shopSelect.innerHTML = tenantsData.map(t => `<option value="${t.unitNo}" ${t.unitNo === unitNo ? 'selected' : ''}>${t.unitNo} - ${t.tenantName}</option>`).join('');
+      document.getElementById('addDetailsModal').classList.remove('hidden');
+    }
+
+    function closeAddDetailsModal() {
+      document.getElementById('addDetailsModal').classList.add('hidden');
+    }
+
+    function saveAddDetails(e) {
+      e.preventDefault();
+      const editor = document.getElementById('editorName').value || 'System User';
+      const type = document.getElementById('addDetailsType').value;
+      const unitNo = document.getElementById('addDetailsShop').value;
+      const t = tenantsData.find(item => item.unitNo === unitNo);
+
+      let logDesc = "";
+      if (type === 'rent') {
+        const month = document.getElementById('addRentMonth').value;
+        const amount = parseFloat(document.getElementById('addRentAmount').value) || 0;
+        const status = document.getElementById('addRentStatus').value;
+
+        if (t) {
+          if (!t.payments) t.payments = {};
+          t.payments[month] = { paid: amount, status: status };
+        }
+        logDesc = `Added rent payment for ${unitNo} (${month}): ₹${amount} [${status}]`;
+        alert("Rent payment added successfully!");
+      } else {
+        const newItem = {
+          date: document.getElementById('addInteractionDate').value,
+          unitNo: unitNo,
+          summary: document.getElementById('addInteractionSummary').value,
+          status: document.getElementById('addInteractionStatus').value,
+          notes: document.getElementById('addInteractionNotes').value,
+          attachment: document.getElementById('addInteractionFile').files[0] ? document.getElementById('addInteractionFile').files[0].name : 'None'
+        };
+        interactionsData.unshift(newItem);
+        logDesc = `Logged interaction for ${unitNo}: ${newItem.summary}`;
+        alert("Interaction logged successfully!");
+      }
+
+      versionHistoryData.unshift({
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        editor: editor,
+        actionType: type === 'rent' ? 'ADD_RENT' : 'LOG_INTERACTION',
+        notes: logDesc
+      });
+
+      closeAddDetailsModal();
+      saveDataToStorage();
+      refreshAllViews();
+    }
+
+    function openRegisterTenantModal(unitNo = "") {
+      if (unitNo) {
+        const t = tenantsData.find(item => item.unitNo === unitNo);
+        if (t) {
+          document.getElementById('regBuilding').value = t.building;
+          document.getElementById('regUnitNo').value = t.unitNo;
+          document.getElementById('regTenantName').value = t.tenantName;
+          document.getElementById('regBusinessType').value = t.businessType;
+          document.getElementById('regPhone').value = t.phone;
+          document.getElementById('regMonthlyRent').value = t.monthlyRent;
+          document.getElementById('regAdvanceAmount').value = t.advanceAmount;
+          document.getElementById('regSqFt').value = t.sqFt;
+          document.getElementById('regEbMeter').value = t.ebMeter;
+          document.getElementById('regKeyGivenDate').value = t.keyGivenDate || '';
+          document.getElementById('regRentDecidedDate').value = t.rentDecidedDate || '';
+          document.getElementById('regRentDueDay').value = t.rentDueDay || '';
+          document.getElementById('regNotes').value = t.notes || '';
+        }
+      } else {
+        document.getElementById('regUnitNo').value = '';
+        document.getElementById('regTenantName').value = '';
+        document.getElementById('regBusinessType').value = '';
+        document.getElementById('regPhone').value = '';
+        document.getElementById('regMonthlyRent').value = '';
+        document.getElementById('regAdvanceAmount').value = '';
+        document.getElementById('regSqFt').value = '';
+        document.getElementById('regEbMeter').value = '';
+        document.getElementById('regKeyGivenDate').value = '';
+        document.getElementById('regRentDecidedDate').value = '';
+        document.getElementById('regRentDueDay').value = '';
+        document.getElementById('regNotes').value = '';
+      }
+      document.getElementById('registerTenantModal').classList.remove('hidden');
+    }
+
+    function closeRegisterTenantModal() {
+      document.getElementById('registerTenantModal').classList.add('hidden');
+    }
+
+    function saveNewTenantRegistration(e) {
+      e.preventDefault();
+      const editor = document.getElementById('regEditorName').value || 'System User';
+      const unitNo = document.getElementById('regUnitNo').value;
+      const building = document.getElementById('regBuilding').value;
+
+      const existingIdx = tenantsData.findIndex(item => item.unitNo.toLowerCase() === unitNo.toLowerCase() && item.building === building);
+
+      const newTenant = {
+        id: "shop_" + Date.now(),
+        building: building,
+        unitNo: unitNo,
+        tenantName: document.getElementById('regTenantName').value,
+        businessType: document.getElementById('regBusinessType').value,
+        phone: document.getElementById('regPhone').value,
+        monthlyRent: parseFloat(document.getElementById('regMonthlyRent').value),
+        advanceAmount: parseFloat(document.getElementById('regAdvanceAmount').value),
+        sqFt: document.getElementById('regSqFt').value,
+        ebMeter: document.getElementById('regEbMeter').value,
+        keyGivenDate: document.getElementById('regKeyGivenDate').value,
+        rentDecidedDate: document.getElementById('regRentDecidedDate').value,
+        rentDueDay: parseInt(document.getElementById('regRentDueDay').value) || '',
+        notes: document.getElementById('regNotes').value,
+        payments: existingIdx !== -1 ? tenantsData[existingIdx].payments : {}
+      };
+
+      let actionDesc = "";
+      if (existingIdx !== -1) {
+        tenantsData[existingIdx] = newTenant;
+        actionDesc = `Updated agreement / transferred tenant for ${unitNo} to ${newTenant.tenantName}`;
+        alert(`Tenant successfully updated/transferred for ${unitNo}!`);
+      } else {
+        tenantsData.push(newTenant);
+        actionDesc = `Registered new rental agreement for ${unitNo} (${newTenant.tenantName})`;
+        alert(`New rental agreement successfully registered for ${unitNo}!`);
+      }
+
+      versionHistoryData.unshift({
+        timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        editor: editor,
+        actionType: 'AGREEMENT_UPDATE',
+        notes: actionDesc
+      });
+
+      closeRegisterTenantModal();
+      saveDataToStorage();
+      refreshAllViews();
+    }
+
+    function refreshAllViews() {
+      renderDashboard();
+      renderShopsTable();
+      renderInteractionsTable();
+      renderAnalyticsMatrix();
+      renderHistoryTable();
+    }
+
+    window.onload = () => {
+      loadDataFromStorage();
+      refreshAllViews();
+    };
+  </script>
+</body>
+</html>
